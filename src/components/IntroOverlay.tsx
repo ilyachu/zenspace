@@ -36,9 +36,10 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
   const handleEnter = () => {
     if (hasEntered || isFading) return;
     setIsFading(true);
+    // Smoothly notify parent to start fading in the HUD in sync with intro fade out
+    onEnter();
     setTimeout(() => {
       setHasEntered(true);
-      onEnter();
     }, 1000);
   };
 
@@ -64,10 +65,10 @@ export const IntroOverlay: React.FC<IntroOverlayProps> = ({
         isFading ? 'opacity-0 invisible pointer-events-none' : 'opacity-100 visible'
       }`}
       style={{
-        background: 'radial-gradient(circle at 50% 58%, rgba(8, 16, 34, 0.65), rgba(3, 7, 18, 0.88))'
+        background: 'radial-gradient(circle at 50% 58%, rgba(8, 16, 34, 0.75), rgba(3, 7, 18, 0.92))'
       }}
     >
-      {/* Language Switcher in Top Right (Exact lofi-night-sky layout) */}
+      {/* Language Switcher in Top Right */}
       <div
         className="absolute top-4 right-4 z-50 inline-flex items-center gap-0 bg-[#060c1a]/80 border border-white/10 rounded-full p-1 backdrop-blur-xl"
         onClick={(e) => e.stopPropagation()}

@@ -30,6 +30,7 @@ const ZEN_QUOTES = {
 
 export function App() {
   // Navigation & Language State
+  const [hasEntered, setHasEntered] = useState<boolean>(false);
   const [lang, setLang] = useState<'ru' | 'en'>(() => {
     try {
       const saved = localStorage.getItem('zenspace_lang');
@@ -392,6 +393,7 @@ export function App() {
 
   // Inactivity dimmer
   useEffect(() => {
+    if (!hasEntered) return;
     const handleMouseMove = () => {
       setIsZenDimmed(false);
       document.body.classList.remove('cursor-none');
@@ -411,10 +413,11 @@ export function App() {
       if (mouseActivityTimerRef.current) clearTimeout(mouseActivityTimerRef.current);
       document.body.classList.remove('cursor-none');
     };
-  }, [isRunning]);
+  }, [isRunning, hasEntered]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
+    if (!hasEntered) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         e.preventDefault();
@@ -436,7 +439,7 @@ export function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSession, handleModeChange, masterVolume]);
+  }, [toggleSession, handleModeChange, masterVolume, hasEntered]);
 
   const isBreatheStudioTrack = mode === 'breathe' && breathPattern.startsWith('ru-');
   const isVisualRhythmMode = mode === 'breathe' && !breathPattern.startsWith('ru-');
@@ -480,7 +483,7 @@ export function App() {
     <div className="relative min-h-screen w-full flex flex-col items-center justify-between p-4 md:p-6 overflow-hidden bg-[#030712] text-[#e6edf8]">
       {/* 1. Intro Screen Overlay in exact lofi-night-sky style */}
       <IntroOverlay
-        onEnter={() => {}}
+        onEnter={() => setHasEntered(true)}
         lang={lang}
         onToggleLang={toggleLang}
       />
@@ -492,10 +495,16 @@ export function App() {
         breathScale={breathHaloScale}
       />
 
-      {/* 3. App Main HUD Container */}
-      <div className={`relative z-10 w-full max-w-5xl h-full min-h-[92vh] flex flex-col items-center justify-between transition-opacity duration-1000 ${
-        isZenDimmed ? 'opacity-15' : 'opacity-100'
-      }`}>
+      {/* 3. App Main HUD Container (Hidden until user clicks Enter) */}
+      <div
+        className={`relative z-10 w-full max-w-5xl h-full min-h-[92vh] flex flex-col items-center justify-between transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          !hasEntered
+            ? 'opacity-0 invisible pointer-events-none scale-95'
+            : isZenDimmed
+            ? 'opacity-15 visible pointer-events-auto scale-100'
+            : 'opacity-100 visible pointer-events-auto scale-100'
+        }`}
+      >
         <Header
           mode={mode}
           onModeChange={handleModeChange}
