@@ -4,6 +4,7 @@ import { Header, AppMode } from './components/Header';
 import { CircularRing } from './components/CircularRing';
 import { FooterControls } from './components/FooterControls';
 import { AuthModal } from './components/AuthModal';
+import { IntroOverlay } from './components/IntroOverlay';
 import { audioEngine, GUIDED_TRACKS } from './services/audioEngine';
 
 const ZEN_QUOTES = [
@@ -438,14 +439,17 @@ export function App() {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-between p-4 md:p-6 overflow-hidden bg-[#030712] text-[#e6edf8]">
-      {/* Theme-Adaptive Living Particle Background Canvas */}
+      {/* 1. Intro Screen Overlay in exact lofi-night-sky style */}
+      <IntroOverlay onEnter={() => {}} />
+
+      {/* 2. Theme-Adaptive Living Particle Background Canvas */}
       <ParticleCanvas
         theme={getAmbientTheme()}
         isRunning={isRunning}
         breathScale={breathHaloScale}
       />
 
-      {/* App Container */}
+      {/* 3. App Main HUD Container */}
       <div className={`relative z-10 w-full max-w-5xl h-full min-h-[92vh] flex flex-col items-center justify-between transition-opacity duration-1000 ${
         isZenDimmed ? 'opacity-15' : 'opacity-100'
       }`}>
@@ -504,7 +508,7 @@ export function App() {
         />
       </div>
 
-      {/* Auth & Monetization Modal */}
+      {/* 4. Auth & Monetization Modal */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
