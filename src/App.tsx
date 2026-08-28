@@ -3,7 +3,18 @@ import { ParticleCanvas, AmbientTheme } from './components/ParticleCanvas';
 import { Header, AppMode } from './components/Header';
 import { CircularRing } from './components/CircularRing';
 import { FooterControls } from './components/FooterControls';
+import { AuthModal } from './components/AuthModal';
 import { audioEngine, GUIDED_TRACKS } from './services/audioEngine';
+
+const ZEN_QUOTES = [
+  'ничего срочного сегодня',
+  'вдох — покой, выдох — отпускание',
+  'здесь и сейчас всё спокойно',
+  'ум чист как ночное небо',
+  'просто наблюдайте за дыханием',
+  'тишина внутри вас',
+  'возвращайтесь в настоящий момент'
+];
 
 export function App() {
   // Navigation State
@@ -12,6 +23,20 @@ export function App() {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isZenDimmed, setIsZenDimmed] = useState<boolean>(false);
 
+  // Auth & Monetization Modal State
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
+  const [user, setUser] = useState<{ email: string; name: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem('zenspace_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Floating Sky Thought
+  const [quoteIdx, setQuoteIdx] = useState<number>(0);
+
   // Meditation Settings
   const [meditateType, setMeditateType] = useState<'free' | string>('ru-bodyscan');
   const [meditateDuration, setMeditateDuration] = useState<number>(238);
@@ -19,7 +44,7 @@ export function App() {
   const [meditateBgSound, setMeditateBgSound] = useState<string>('fire');
   const [playStartBell, setPlayStartBell] = useState<boolean>(false);
 
-  // Breathing Settings (Studio track or visual rhythm)
+  // Breathing Settings
   const [breathPattern, setBreathPattern] = useState<string>('ru-breathing');
   const [breathPhaseText, setBreathPhaseText] = useState<string>('Вдох');
   const [breathHaloScale, setBreathHaloScale] = useState<number>(1.0);
@@ -44,6 +69,25 @@ export function App() {
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60);
     return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  const handleLogin = (email: string, name: string) => {
+    const u = { email, name };
+    setUser(u);
+    try {
+      localStorage.setItem('zenspace_user', JSON.stringify(u));
+    } catch {}
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    try {
+      localStorage.removeItem('zenspace_user');
+    } catch {}
+  };
+
+  const nextQuote = () => {
+    setQuoteIdx((prev) => (prev + 1) % ZEN_QUOTES.length);
   };
 
   // Switch Mode Handler
@@ -105,14 +149,12 @@ export function App() {
       audioEngine.playBowl();
     }
 
-    // Start background ambience if selected
     if (meditateBgSound !== 'none') {
       audioEngine.playSoundscape(meditateBgSound);
     } else {
       audioEngine.stopSoundscape();
     }
 
-    // Start Guided Russian track or Free Timer
     if (meditateType !== 'free') {
       audioEngine.playGuidedTrack(
         meditateType,
@@ -142,14 +184,12 @@ export function App() {
   }, [playStartBell, meditateBgSound, meditateType, meditateTimeLeft, completeSession]);
 
   const startBreatheSession = useCallback(() => {
-    // Start background nature ambience if selected
     if (meditateBgSound !== 'none') {
       audioEngine.playSoundscape(meditateBgSound);
     } else {
       audioEngine.stopSoundscape();
     }
 
-    // If it is a studio Russian human breathing track (UCLA MARC)
     if (breathPattern.startsWith('ru-')) {
       audioEngine.playGuidedTrack(
         breathPattern,
@@ -168,7 +208,6 @@ export function App() {
       return;
     }
 
-    // If it is a visual rhythm pattern (Box, Relax, Coherent)
     const patterns: Record<string, Array<{ text: string; dur: number; scale: number; opacity: number }>> = {
       box: [
         { text: 'Вдох', dur: 4000, scale: 1.35, opacity: 0.5 },
@@ -333,7 +372,7 @@ export function App() {
         mouseActivityTimerRef.current = window.setTimeout(() => {
           setIsZenDimmed(true);
           document.body.classList.add('cursor-none');
-        }, 3000);
+        }, 3500);
       }
     };
 
@@ -398,7 +437,7 @@ export function App() {
   }
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-between p-6 overflow-hidden bg-radial from-[#152033] to-[#070c18] text-slate-100">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-between p-4 md:p-6 overflow-hidden bg-[#030712] text-[#e6edf8]">
       {/* Theme-Adaptive Living Particle Background Canvas */}
       <ParticleCanvas
         theme={getAmbientTheme()}
@@ -407,8 +446,8 @@ export function App() {
       />
 
       {/* App Container */}
-      <div className={`relative z-10 w-full max-w-4xl h-full min-h-[92vh] flex flex-col items-center justify-between transition-opacity duration-1000 ${
-        isZenDimmed ? 'opacity-10' : 'opacity-100'
+      <div className={`relative z-10 w-full max-w-5xl h-full min-h-[92vh] flex flex-col items-center justify-between transition-opacity duration-1000 ${
+        isZenDimmed ? 'opacity-15' : 'opacity-100'
       }`}>
         <Header
           mode={mode}
@@ -416,7 +455,18 @@ export function App() {
           onPlayBowl={() => audioEngine.playBowl()}
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
+          onOpenAuth={() => setIsAuthOpen(true)}
+          user={user}
         />
+
+        {/* Floating Poetic Zen Quote in lofi-night-sky style */}
+        <div
+          onClick={nextQuote}
+          title="Нажмите, чтобы сменить мысль"
+          className="cursor-pointer text-xs md:text-sm font-['Jost',sans-serif] tracking-wider text-[#94a3b8] hover:text-[#f6c46a] transition-all duration-300 py-1.5 px-4 rounded-full bg-[#060c1a]/50 border border-white/5 backdrop-blur-md shadow-sm select-none hover:scale-105 my-2"
+        >
+          {ZEN_QUOTES[quoteIdx]}
+        </div>
 
         <CircularRing
           progress={progress}
@@ -453,6 +503,15 @@ export function App() {
           onToggleStartBell={() => setPlayStartBell(prev => !prev)}
         />
       </div>
+
+      {/* Auth & Monetization Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        user={user}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }
