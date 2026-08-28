@@ -1,6 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Check, Sparkles, Clock, Mic, TreePine, Bell, Wind } from 'lucide-react';
 import { GUIDED_TRACKS, SOUNDSCAPES, GuidedTrack, Soundscape } from '../services/audioEngine';
+
+// Hook for Escape key closing
+const useEscapeKey = (isOpen: boolean, onClose: () => void) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+};
 
 // 1. Модальное окно выбора практики медитации
 interface PracticeModalProps {
@@ -20,6 +35,7 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({
   meditateDuration,
   onSelectDuration
 }) => {
+  useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
 
   const freeDurations = [
@@ -32,19 +48,24 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div
-        className="relative w-full max-w-lg bg-[#0d1527] border border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden text-slate-100 max-h-[90vh] flex flex-col"
+        className="relative w-full max-w-lg bg-[#0d1527] border border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden text-slate-100 max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div>
             <h3 className="text-lg font-semibold text-white">Выбор практики</h3>
-            <p className="text-xs text-slate-400">Свободный таймер или студийные русские медитации</p>
+            <p className="text-xs text-slate-400">Свободный таймер или русские голосовые медитации</p>
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть (Esc)"
+            title="Закрыть (Esc)"
             className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -85,7 +106,7 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({
                     }}
                     className={`text-xs font-medium px-3 py-1 rounded-full border transition-all ${
                       meditateType === 'free' && meditateDuration === d.sec
-                        ? 'bg-sky-400 text-slate-950 font-semibold border-sky-400'
+                        ? 'bg-sky-400 text-slate-950 font-semibold border-sky-400 shadow-md'
                         : 'bg-white/[0.04] text-slate-300 border-white/10 hover:bg-white/10'
                     }`}
                   >
@@ -114,7 +135,7 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({
                   className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
                     meditateType === track.id
                       ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
+                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
                   }`}
                 >
                   <div>
@@ -139,10 +160,11 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-white/10 flex justify-end">
+        <div className="pt-3 border-t border-white/10 flex justify-between items-center text-xs text-slate-500">
+          <span>Нажмите <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-mono text-[10px] text-slate-400">Esc</kbd> или кликните вне окна</span>
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-sky-400 text-slate-950 text-xs font-semibold hover:bg-sky-300 transition-colors"
+            className="px-5 py-2 rounded-xl bg-sky-400 text-slate-950 text-xs font-semibold hover:bg-sky-300 transition-colors shadow-lg"
           >
             Готово
           </button>
@@ -178,12 +200,16 @@ export const SoundModal: React.FC<SoundModalProps> = ({
   playStartBell = false,
   onToggleStartBell
 }) => {
+  useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div
-        className="relative w-full max-w-md bg-[#0d1527] border border-white/10 rounded-3xl p-6 shadow-2xl text-slate-100 flex flex-col"
+        className="relative w-full max-w-md bg-[#0d1527] border border-white/10 rounded-3xl p-6 shadow-2xl text-slate-100 flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
@@ -193,6 +219,8 @@ export const SoundModal: React.FC<SoundModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть (Esc)"
+            title="Закрыть (Esc)"
             className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -200,7 +228,7 @@ export const SoundModal: React.FC<SoundModalProps> = ({
         </div>
 
         {/* Звуковые карточки */}
-        <div className="py-4 space-y-2">
+        <div className="py-4 space-y-2 overflow-y-auto scrollbar-none pr-0.5">
           {/* Тишина */}
           <div
             onClick={() => {
@@ -209,7 +237,7 @@ export const SoundModal: React.FC<SoundModalProps> = ({
             className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
               selectedSound === 'none'
                 ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
+                : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
             }`}
           >
             <div className="flex items-center gap-3">
@@ -232,7 +260,7 @@ export const SoundModal: React.FC<SoundModalProps> = ({
               className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
                 selectedSound === s.id
                   ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                  : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
+                  : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -328,6 +356,7 @@ export const BreatheModal: React.FC<BreatheModalProps> = ({
   selectedPattern,
   onSelectPattern
 }) => {
+  useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
 
   const studioTracks = [
@@ -367,9 +396,12 @@ export const BreatheModal: React.FC<BreatheModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div
-        className="relative w-full max-w-md bg-[#0d1527] border border-white/10 rounded-3xl p-6 shadow-2xl text-slate-100 flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-md bg-[#0d1527] border border-white/10 rounded-3xl p-6 shadow-2xl text-slate-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
@@ -379,6 +411,8 @@ export const BreatheModal: React.FC<BreatheModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            aria-label="Закрыть (Esc)"
+            title="Закрыть (Esc)"
             className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -403,7 +437,7 @@ export const BreatheModal: React.FC<BreatheModalProps> = ({
                   className={`p-3 rounded-2xl border cursor-pointer transition-all ${
                     selectedPattern === t.id
                       ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
+                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-0.5">
@@ -434,7 +468,7 @@ export const BreatheModal: React.FC<BreatheModalProps> = ({
                   className={`p-3 rounded-2xl border cursor-pointer transition-all ${
                     selectedPattern === p.id
                       ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06]'
+                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-0.5">
@@ -447,6 +481,17 @@ export const BreatheModal: React.FC<BreatheModalProps> = ({
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="pt-3 border-t border-white/10 flex justify-between items-center text-xs text-slate-500">
+          <span>Нажмите <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-mono text-[10px] text-slate-400">Esc</kbd> или кликните вне окна</span>
+          <button
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-sky-400 text-slate-950 text-xs font-semibold hover:bg-sky-300 transition-colors shadow-lg"
+          >
+            Готово
+          </button>
         </div>
       </div>
     </div>
