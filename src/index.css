@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .bg-radial {
+    background-image: radial-gradient(circle at 50% 35%, var(--tw-gradient-from) 0%, var(--tw-gradient-to) 100%);
+  }
+
+  /* Hide scrollbars */
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #070c18;
+  color: #f8fafc;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+body.cursor-none, body.cursor-none * {
+  cursor: none !important;
+}
