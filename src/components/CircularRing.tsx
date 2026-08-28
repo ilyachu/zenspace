@@ -31,7 +31,7 @@ export const CircularRing: React.FC<CircularRingProps> = ({
   const strokeDashoffset = circumference - progress * circumference;
 
   return (
-    <div className="relative flex items-center justify-center w-[340px] h-[340px] my-auto">
+    <div className="relative flex items-center justify-center w-[280px] h-[280px] sm:w-[340px] sm:h-[340px] my-auto scale-[0.92] sm:scale-100 transition-transform duration-300">
       {/* 1. Pure SVG Radial Halo (Timed with breath phase duration) */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
@@ -53,7 +53,7 @@ export const CircularRing: React.FC<CircularRingProps> = ({
       </svg>
 
       {/* 2. SVG Circular Progress Ring */}
-      <svg className="absolute w-[320px] h-[320px] -rotate-90 pointer-events-none" viewBox="0 0 320 320">
+      <svg className="absolute w-[270px] h-[270px] sm:w-[320px] sm:h-[320px] -rotate-90 pointer-events-none" viewBox="0 0 320 320">
         <circle
           cx="160"
           cy="160"
@@ -79,32 +79,32 @@ export const CircularRing: React.FC<CircularRingProps> = ({
       {/* 3. Center Interactive Focus Area */}
       <div
         onClick={onToggle}
-        className="relative z-10 flex flex-col items-center justify-center gap-2.5 cursor-pointer w-[220px] group select-none"
+        className="relative z-10 flex flex-col items-center justify-center gap-2 cursor-pointer w-[200px] sm:w-[220px] group select-none"
       >
         <button
           aria-label={isRunning ? 'Пауза' : 'Старт'}
-          className="w-20 h-20 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-2xl flex items-center justify-center text-slate-100 shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-300 group-hover:scale-105 group-hover:bg-white/[0.1] group-hover:border-sky-400/50"
+          className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/[0.04] border border-white/10 backdrop-blur-2xl flex items-center justify-center text-slate-100 shadow-[0_8px_32px_rgba(0,0,0,0.4)] transition-all duration-300 group-hover:scale-105 group-hover:bg-white/[0.1] group-hover:border-sky-400/50"
         >
           {isRunning ? (
-            <Pause className="w-7 h-7 text-sky-400 fill-sky-400" />
+            <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-sky-400 fill-sky-400" />
           ) : (
-            <Play className="w-7 h-7 text-slate-100 fill-slate-100 translate-x-0.5" />
+            <Play className="w-6 h-6 sm:w-7 sm:h-7 text-slate-100 fill-slate-100 translate-x-0.5" />
           )}
         </button>
 
         {isBreatheMode ? (
-          <div className="h-10 flex items-center justify-center">
-            <span className="text-xl font-medium tracking-widest text-sky-400 uppercase drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">
+          <div className="h-9 flex items-center justify-center">
+            <span className="text-lg sm:text-xl font-medium tracking-widest text-sky-400 uppercase drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">
               {breathPhaseText || (isRunning ? 'Дыхание' : 'Готовы к практике')}
             </span>
           </div>
         ) : (
-          <div className="text-4xl font-light tracking-tight tabular-nums text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
+          <div className="text-3xl sm:text-4xl font-light tracking-tight tabular-nums text-slate-100 drop-shadow-[0_2px_12px_rgba(0,0,0,0.4)]">
             {timeLeftFormatted}
           </div>
         )}
 
-        <div className="text-xs font-medium text-slate-400 tracking-wide text-center px-2 line-clamp-1">
+        <div className="text-[11px] sm:text-xs font-medium text-slate-400 tracking-wide text-center px-2 line-clamp-1">
           {statusText}
         </div>
       </div>

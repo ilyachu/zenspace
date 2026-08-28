@@ -2,10 +2,12 @@
  * ZenSpace Professional Audio Engine
  * Bundled with 100% authentic studio audio assets:
  * - Real Studio Human Russian Guided Meditations & Breathing Practices (UCLA MARC)
- * - Hi-Fi Nature Soundscapes (Moodist)
+ * - Hi-Fi Nature Soundscapes
  * - Authentic Tibetan Singing Bowl
  * - Independent Dual Volume Controls (Voice vs Ambience)
  * - Auto-Ducking
+ * - iOS / Android MediaSession Lock Screen & Background Playback
+ * - Screen WakeLock API
  */
 
 export interface GuidedTrack {
@@ -112,6 +114,7 @@ class AudioEngine {
   private guideAudio: HTMLAudioElement | null = null;
   private bowlAudio: HTMLAudioElement;
 
+  private wakeLock: any = null;
   private onGuideTimeUpdate?: (currentTime: number, duration: number) => void;
   private onGuideEnded?: () => void;
 
@@ -128,6 +131,8 @@ class AudioEngine {
     // Tibetan Singing Bowl
     this.bowlAudio = new Audio('/audio/soundscapes/bowl.mp3');
     this.bowlAudio.preload = 'auto';
+
+    this.initMediaSessionHandlers();
   }
 
   private calculateAmbientVol(): number {
@@ -211,6 +216,9 @@ class AudioEngine {
 
     const p = target.play();
     if (p && typeof p.catch === 'function') p.catch(() => {});
+
+    this.updateMediaSessionMetadata();
+    this.requestWakeLock();
   }
 
   public stopSoundscape() {
@@ -218,6 +226,9 @@ class AudioEngine {
     this.bgElements.forEach(audio => {
       audio.pause();
     });
+    if (!this.guideAudio) {
+      this.releaseWakeLock();
+    }
   }
 
   public playGuidedTrack(
@@ -242,6 +253,7 @@ class AudioEngine {
       if (this.onGuideTimeUpdate) {
         this.onGuideTimeUpdate(audio.currentTime, audio.duration || track.duration);
       }
+      this.updateMediaSessionPosition(audio.currentTime, audio.duration || track.duration);
     };
 
     audio.onended = () => {
@@ -254,6 +266,9 @@ class AudioEngine {
 
     const p = audio.play();
     if (p && typeof p.catch === 'function') p.catch(() => {});
+
+    this.updateMediaSessionMetadata();
+    this.requestWakeLock();
   }
 
   public pauseGuidedTrack() {
@@ -267,6 +282,7 @@ class AudioEngine {
     if (this.guideAudio && this.guideAudio.paused) {
       this.updateVolumes();
       this.guideAudio.play().catch(() => {});
+      this.requestWakeLock();
     }
   }
 
@@ -279,11 +295,15 @@ class AudioEngine {
       this.activeGuideId = null;
     }
     this.updateVolumes();
+    if (!this.activeBgId) {
+      this.releaseWakeLock();
+    }
   }
 
   public stopAll() {
     this.stopSoundscape();
     this.stopGuidedTrack();
+    this.releaseWakeLock();
   }
 
   public getActiveSoundscape(): string | null {
@@ -292,6 +312,103 @@ class AudioEngine {
 
   public getActiveGuide(): string | null {
     return this.activeGuideId;
+  }
+
+  /* ----------------------------------------------------
+     iOS / Android Lock Screen & Background Playback
+     ---------------------------------------------------- */
+  private initMediaSessionHandlers() {
+    if (!('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      if (this.guideAudio) this.resumeGuidedTrack();
+      else if (this.activeBgId) this.playSoundscape(this.activeBgId);
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      if (this.guideAudio) this.pauseGuidedTrack();
+      else this.stopSoundscape();
+    });
+
+    navigator.mediaSession.setActionHandler('stop', () => {
+      this.stopAll();
+    });
+
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined && this.guideAudio) {
+        this.guideAudio.currentTime = details.seekTime;
+      }
+    });
+  }
+
+  private updateMediaSessionMetadata() {
+    if (!('mediaSession' in navigator)) return;
+
+    let title = 'Звуковой покой';
+    let subtitle = 'ZenSpace // Осознанность';
+
+    if (this.activeGuideId) {
+      const track = GUIDED_TRACKS.find(t => t.id === this.activeGuideId);
+      if (track) {
+        title = track.title;
+        subtitle = track.subtitle;
+      }
+    } else if (this.activeBgId) {
+      const sound = SOUNDSCAPES.find(s => s.id === this.activeBgId);
+      if (sound) {
+        title = `Звуковой ландшафт: ${sound.name}`;
+      }
+    }
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title,
+      artist: 'ZenSpace // Il Chu',
+      album: subtitle,
+      artwork: [
+        { src: '/favicon.svg', sizes: '512x512', type: 'image/svg+xml' }
+      ]
+    });
+  }
+
+  private updateMediaSessionPosition(currentTime: number, duration: number) {
+    if (!('mediaSession' in navigator) || !('setPositionState' in navigator.mediaSession)) return;
+    if (isNaN(duration) || duration <= 0) return;
+
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: Math.max(0, duration),
+        playbackRate: 1,
+        position: Math.max(0, Math.min(currentTime, duration))
+      });
+    } catch {
+      // Ignored if state update is out of range
+    }
+  }
+
+  /* ----------------------------------------------------
+     Screen WakeLock API (Не гасить экран / Ночник)
+     ---------------------------------------------------- */
+  private async requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      if (!this.wakeLock) {
+        this.wakeLock = await (navigator as any).wakeLock.request('screen');
+        this.wakeLock.addEventListener('release', () => {
+          this.wakeLock = null;
+        });
+      }
+    } catch {
+      // Browser permission / battery saver denied
+    }
+  }
+
+  private async releaseWakeLock() {
+    if (this.wakeLock) {
+      try {
+        await this.wakeLock.release();
+      } catch {}
+      this.wakeLock = null;
+    }
   }
 }
 
