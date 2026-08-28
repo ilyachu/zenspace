@@ -3,7 +3,7 @@ import { ParticleCanvas, AmbientTheme } from './components/ParticleCanvas';
 import { Header, AppMode } from './components/Header';
 import { CircularRing } from './components/CircularRing';
 import { FooterControls } from './components/FooterControls';
-import { AuthModal } from './components/AuthModal';
+import { SupportModal } from './components/SupportModal';
 import { IntroOverlay } from './components/IntroOverlay';
 import { audioEngine, GUIDED_TRACKS } from './services/audioEngine';
 
@@ -45,16 +45,8 @@ export function App() {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isZenDimmed, setIsZenDimmed] = useState<boolean>(false);
 
-  // Auth & Monetization Modal State
-  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
-  const [user, setUser] = useState<{ email: string; name: string } | null>(() => {
-    try {
-      const saved = localStorage.getItem('zenspace_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  // Support Modal State (Simplified & Laconic)
+  const [isSupportOpen, setIsSupportOpen] = useState<boolean>(false);
 
   // Floating Sky Thought
   const [quoteIdx, setQuoteIdx] = useState<number>(0);
@@ -98,21 +90,6 @@ export function App() {
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60);
     return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
-  const handleLogin = (email: string, name: string) => {
-    const u = { email, name };
-    setUser(u);
-    try {
-      localStorage.setItem('zenspace_user', JSON.stringify(u));
-    } catch {}
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    try {
-      localStorage.removeItem('zenspace_user');
-    } catch {}
   };
 
   const nextQuote = () => {
@@ -495,7 +472,7 @@ export function App() {
         breathScale={breathHaloScale}
       />
 
-      {/* 3. App Main HUD Container (Hidden until user clicks Enter) */}
+      {/* 3. App Main HUD Container */}
       <div
         className={`relative z-10 w-full max-w-5xl h-full min-h-[92vh] flex flex-col items-center justify-between transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           !hasEntered
@@ -511,8 +488,7 @@ export function App() {
           onPlayBowl={() => audioEngine.playBowl()}
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
-          onOpenAuth={() => setIsAuthOpen(true)}
-          user={user}
+          onOpenSupport={() => setIsSupportOpen(true)}
         />
 
         {/* Floating Poetic Zen Quote in lofi-night-sky style */}
@@ -560,13 +536,11 @@ export function App() {
         />
       </div>
 
-      {/* 4. Auth & Monetization Modal */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        user={user}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
+      {/* 4. Support & Monetization Modal */}
+      <SupportModal
+        isOpen={isSupportOpen}
+        onClose={() => setIsSupportOpen(false)}
+        lang={lang}
       />
     </div>
   );
