@@ -1,0 +1,16 @@
+services:
+  zenspace:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zenspace
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8089}:80"
+    environment:
+      - NODE_ENV=production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
