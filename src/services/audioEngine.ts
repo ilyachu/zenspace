@@ -6,7 +6,7 @@
  * - Authentic Tibetan Singing Bowl
  * - Independent Dual Volume Controls (Voice vs Ambience)
  * - Auto-Ducking
- * - iOS / Android MediaSession Lock Screen & Background Playback
+ * - iOS / Android Background Audio Bridge & MediaSession Lock Screen Playback
  * - Screen WakeLock API
  */
 
@@ -109,30 +109,116 @@ class AudioEngine {
 
   private activeBgId: string | null = null;
   private activeGuideId: string | null = null;
+  private isPlaying: boolean = false;
 
   private bgElements: Map<string, HTMLAudioElement> = new Map();
   private guideAudio: HTMLAudioElement | null = null;
   private bowlAudio: HTMLAudioElement;
 
+  // iOS Lock Screen Background Audio Bridge
+  private bgKeepAliveAudio: HTMLAudioElement | null = null;
   private wakeLock: any = null;
+
   private onGuideTimeUpdate?: (currentTime: number, duration: number) => void;
   private onGuideEnded?: () => void;
 
   constructor() {
-    // Pre-initialize soundscape players
+    // 1. Pre-initialize soundscape players
     SOUNDSCAPES.forEach(s => {
       const a = new Audio(s.url);
       a.loop = true;
       a.preload = 'auto';
+      (a as any).playsInline = true;
+      a.setAttribute('playsinline', 'true');
+      a.setAttribute('webkit-playsinline', 'true');
       a.volume = this.calculateAmbientVol();
       this.bgElements.set(s.id, a);
     });
 
-    // Tibetan Singing Bowl
+    // 2. Tibetan Singing Bowl
     this.bowlAudio = new Audio('/audio/soundscapes/bowl.mp3');
     this.bowlAudio.preload = 'auto';
+    (this.bowlAudio as any).playsInline = true;
+    this.bowlAudio.setAttribute('playsinline', 'true');
+    this.bowlAudio.setAttribute('webkit-playsinline', 'true');
 
+    // 3. iOS Lock Screen Keep-Alive Audio Bridge & MediaSession Setup
+    this.setupIosBackgroundAudioBridge();
     this.initMediaSessionHandlers();
+    this.bindLifecycleEvents();
+  }
+
+  /**
+   * Generates a 2-second inaudible 18 Hz tone.
+   * Pure digital silence is discarded by iOS WebKit, but an inaudible 18Hz tone
+   * guarantees the iOS system keeps AVAudioSessionCategoryPlayback active on lock screen!
+   */
+  private createQuietKeepAliveUrl(): string {
+    const sampleRate = 22050;
+    const seconds = 2;
+    const numSamples = sampleRate * seconds;
+    const buffer = new ArrayBuffer(44 + numSamples * 2);
+    const view = new DataView(buffer);
+
+    const writeStr = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + numSamples * 2, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, 1, true); // Mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, numSamples * 2, true);
+
+    for (let i = 0; i < numSamples; i++) {
+      const sample = Math.sin((i * 18 * 2 * Math.PI) / sampleRate) * 80;
+      view.setInt16(44 + i * 2, sample, true);
+    }
+
+    return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+  }
+
+  private setupIosBackgroundAudioBridge() {
+    if (typeof document === 'undefined') return;
+    try {
+      const el = document.createElement('audio');
+      el.loop = true;
+      el.preload = 'auto';
+      (el as any).playsInline = true;
+      el.volume = 0.02;
+      el.setAttribute('playsinline', 'true');
+      el.setAttribute('webkit-playsinline', 'true');
+      el.setAttribute('aria-hidden', 'true');
+      el.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;';
+      el.src = this.createQuietKeepAliveUrl();
+      document.body.appendChild(el);
+      this.bgKeepAliveAudio = el;
+    } catch (e) {
+      console.warn('iOS audio bridge init warning:', e);
+    }
+  }
+
+  private bindLifecycleEvents() {
+    if (typeof window === 'undefined') return;
+
+    const keepAlive = () => {
+      if (this.isPlaying && this.bgKeepAliveAudio && this.bgKeepAliveAudio.paused) {
+        this.bgKeepAliveAudio.play().catch(() => {});
+      }
+      this.updateMediaSessionMetadata();
+    };
+
+    document.addEventListener('visibilitychange', keepAlive);
+    window.addEventListener('pageshow', keepAlive);
+    window.addEventListener('focus', keepAlive);
   }
 
   private calculateAmbientVol(): number {
@@ -173,25 +259,13 @@ class AudioEngine {
     this.bowlAudio.volume = this.masterVolume;
   }
 
-  public getMasterVolume(): number {
-    return this.masterVolume;
-  }
-  public getVoiceVolume(): number {
-    return this.voiceVolume;
-  }
-  public getAmbientVolume(): number {
-    return this.ambientVolume;
-  }
-
   public playBowl() {
     try {
       this.bowlAudio.currentTime = 0;
       this.bowlAudio.volume = this.masterVolume;
       const p = this.bowlAudio.play();
       if (p && typeof p.catch === 'function') p.catch(() => {});
-    } catch {
-      // Ignored
-    }
+    } catch {}
   }
 
   public playSoundscape(id: string | null) {
@@ -211,11 +285,16 @@ class AudioEngine {
     const target = this.bgElements.get(id);
     if (!target) return;
 
+    this.isPlaying = true;
     this.activeBgId = id;
     target.volume = this.calculateAmbientVol();
 
     const p = target.play();
     if (p && typeof p.catch === 'function') p.catch(() => {});
+
+    if (this.bgKeepAliveAudio && this.bgKeepAliveAudio.paused) {
+      this.bgKeepAliveAudio.play().catch(() => {});
+    }
 
     this.updateMediaSessionMetadata();
     this.requestWakeLock();
@@ -227,6 +306,8 @@ class AudioEngine {
       audio.pause();
     });
     if (!this.guideAudio) {
+      this.isPlaying = false;
+      if (this.bgKeepAliveAudio) this.bgKeepAliveAudio.pause();
       this.releaseWakeLock();
     }
   }
@@ -241,6 +322,7 @@ class AudioEngine {
     const track = GUIDED_TRACKS.find(t => t.id === trackId);
     if (!track) return;
 
+    this.isPlaying = true;
     this.activeGuideId = trackId;
     this.onGuideTimeUpdate = onTimeUpdate;
     this.onGuideEnded = onEnded;
@@ -248,6 +330,9 @@ class AudioEngine {
     const audio = new Audio(track.url);
     audio.volume = this.calculateVoiceVol();
     audio.preload = 'auto';
+    (audio as any).playsInline = true;
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('webkit-playsinline', 'true');
 
     audio.ontimeupdate = () => {
       if (this.onGuideTimeUpdate) {
@@ -267,6 +352,10 @@ class AudioEngine {
     const p = audio.play();
     if (p && typeof p.catch === 'function') p.catch(() => {});
 
+    if (this.bgKeepAliveAudio && this.bgKeepAliveAudio.paused) {
+      this.bgKeepAliveAudio.play().catch(() => {});
+    }
+
     this.updateMediaSessionMetadata();
     this.requestWakeLock();
   }
@@ -276,12 +365,20 @@ class AudioEngine {
       this.guideAudio.pause();
       this.updateVolumes();
     }
+    if (!this.activeBgId) {
+      this.isPlaying = false;
+      if (this.bgKeepAliveAudio) this.bgKeepAliveAudio.pause();
+    }
   }
 
   public resumeGuidedTrack() {
     if (this.guideAudio && this.guideAudio.paused) {
+      this.isPlaying = true;
       this.updateVolumes();
       this.guideAudio.play().catch(() => {});
+      if (this.bgKeepAliveAudio && this.bgKeepAliveAudio.paused) {
+        this.bgKeepAliveAudio.play().catch(() => {});
+      }
       this.requestWakeLock();
     }
   }
@@ -296,13 +393,17 @@ class AudioEngine {
     }
     this.updateVolumes();
     if (!this.activeBgId) {
+      this.isPlaying = false;
+      if (this.bgKeepAliveAudio) this.bgKeepAliveAudio.pause();
       this.releaseWakeLock();
     }
   }
 
   public stopAll() {
+    this.isPlaying = false;
     this.stopSoundscape();
     this.stopGuidedTrack();
+    if (this.bgKeepAliveAudio) this.bgKeepAliveAudio.pause();
     this.releaseWakeLock();
   }
 
@@ -341,7 +442,7 @@ class AudioEngine {
     });
   }
 
-  private updateMediaSessionMetadata() {
+  public updateMediaSessionMetadata() {
     if (!('mediaSession' in navigator)) return;
 
     let title = 'Звуковой покой';
@@ -380,9 +481,7 @@ class AudioEngine {
         playbackRate: 1,
         position: Math.max(0, Math.min(currentTime, duration))
       });
-    } catch {
-      // Ignored if state update is out of range
-    }
+    } catch {}
   }
 
   /* ----------------------------------------------------
@@ -397,9 +496,7 @@ class AudioEngine {
           this.wakeLock = null;
         });
       }
-    } catch {
-      // Browser permission / battery saver denied
-    }
+    } catch {}
   }
 
   private async releaseWakeLock() {
