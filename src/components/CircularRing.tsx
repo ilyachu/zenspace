@@ -10,6 +10,7 @@ interface CircularRingProps {
   isBreatheMode?: boolean;
   breathHaloScale?: number;
   breathHaloOpacity?: number;
+  phaseDurationMs?: number;
   onToggle: () => void;
 }
 
@@ -22,6 +23,7 @@ export const CircularRing: React.FC<CircularRingProps> = ({
   isBreatheMode = false,
   breathHaloScale = 1.0,
   breathHaloOpacity = 0.2,
+  phaseDurationMs = 1000,
   onToggle
 }) => {
   const radius = 144;
@@ -30,13 +32,14 @@ export const CircularRing: React.FC<CircularRingProps> = ({
 
   return (
     <div className="relative flex items-center justify-center w-[340px] h-[340px] my-auto">
-      {/* 1. Pure SVG Radial Halo (100% Anti-aliased, Zero square pixelation) */}
+      {/* 1. Pure SVG Radial Halo (Timed with breath phase duration) */}
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-none transition-transform duration-1000 ease-out"
+        className="absolute inset-0 w-full h-full pointer-events-none"
         viewBox="0 0 340 340"
         style={{
           transform: `scale(${breathHaloScale})`,
-          opacity: breathHaloOpacity
+          opacity: breathHaloOpacity,
+          transition: `transform ${phaseDurationMs}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${phaseDurationMs}ms ease`
         }}
       >
         <defs>

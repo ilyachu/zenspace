@@ -12,7 +12,6 @@ interface Particle {
   x: number;
   y: number;
   radius: number;
-  baseRadius: number;
   vx: number;
   vy: number;
   baseSpeed: number;
@@ -35,12 +34,81 @@ interface Ripple {
   speed: number;
 }
 
+const THEME_CONFIGS: Record<AmbientTheme, {
+  glowCenter: string;
+  glowMid: string;
+  particles: string[];
+  dirY: number;
+  dirX: number;
+  speedMultiplier: number;
+  swayAmp: number;
+}> = {
+  fire: {
+    glowCenter: 'rgba(249, 115, 22, 0.12)',
+    glowMid: 'rgba(245, 158, 11, 0.04)',
+    particles: ['#fbbf24', '#f97316', '#fdba74', '#fed7aa', '#fde68a'],
+    dirY: -1,
+    dirX: 0.1,
+    speedMultiplier: 0.22,
+    swayAmp: 0.35
+  },
+  night: {
+    glowCenter: 'rgba(99, 102, 241, 0.10)',
+    glowMid: 'rgba(129, 140, 248, 0.03)',
+    particles: ['#c7d2fe', '#818cf8', '#a5b4fc', '#e0e7ff', '#38bdf8', '#ffffff'],
+    dirY: -0.05,
+    dirX: 0.02,
+    speedMultiplier: 0.12,
+    swayAmp: 0.18
+  },
+  rain: {
+    glowCenter: 'rgba(14, 165, 233, 0.10)',
+    glowMid: 'rgba(56, 189, 248, 0.03)',
+    particles: ['#38bdf8', '#7dd3fc', '#bae6fd', '#93c5fd', '#67e8f9'],
+    dirY: 0.65,
+    dirX: 0.05,
+    speedMultiplier: 0.35,
+    swayAmp: 0.12
+  },
+  ocean: {
+    glowCenter: 'rgba(20, 184, 166, 0.11)',
+    glowMid: 'rgba(45, 212, 191, 0.03)',
+    particles: ['#2dd4bf', '#5eead4', '#38bdf8', '#99f6e4', '#a7f3d0'],
+    dirY: -0.15,
+    dirX: 0.25,
+    speedMultiplier: 0.18,
+    swayAmp: 0.4
+  },
+  wind: {
+    glowCenter: 'rgba(34, 197, 94, 0.10)',
+    glowMid: 'rgba(74, 222, 128, 0.03)',
+    particles: ['#4ade80', '#86efac', '#a7f3d0', '#fef08a', '#bbf7d0'],
+    dirY: -0.18,
+    dirX: 0.4,
+    speedMultiplier: 0.25,
+    swayAmp: 0.45
+  },
+  neutral: {
+    glowCenter: 'rgba(56, 189, 248, 0.10)',
+    glowMid: 'rgba(148, 163, 184, 0.03)',
+    particles: ['#ffffff', '#94a3b8', '#cbd5e1', '#38bdf8'],
+    dirY: -0.1,
+    dirX: 0.05,
+    speedMultiplier: 0.15,
+    swayAmp: 0.2
+  }
+};
+
 export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
   theme = 'fire',
   isRunning = false,
   breathScale = 1.0
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Store active props in ref to prevent tearing down the Canvas loop on state changes
+  const propsRef = useRef({ theme, isRunning, breathScale });
+  propsRef.current = { theme, isRunning, breathScale };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -66,24 +134,22 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
     resize();
     window.addEventListener('resize', resize);
 
-    // Mouse Tracking with Heavy Viscous Damping (No jerky movements)
+    // Mouse Tracking
     const mouse = {
       x: width / 2,
       y: height / 2,
       targetX: width / 2,
       targetY: height / 2,
-      active: false,
-      idleTimer: 0
+      active: false
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       mouse.targetX = e.clientX;
       mouse.targetY = e.clientY;
       mouse.active = true;
-      mouse.idleTimer = 0;
 
-      // Gentle, sporadic micro-ripples for rain/ocean (slow, relaxed)
-      if ((theme === 'rain' || theme === 'ocean') && Math.random() < 0.08) {
+      const currentTheme = propsRef.current.theme;
+      if ((currentTheme === 'rain' || currentTheme === 'ocean') && Math.random() < 0.08) {
         addRipple(e.clientX, e.clientY, 35);
       }
     };
@@ -98,7 +164,7 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
         wind: 'rgba(74, 222, 128,',
         neutral: 'rgba(148, 163, 184,'
       };
-      const c = colors[theme] || colors.neutral;
+      const c = colors[propsRef.current.theme] || colors.neutral;
       ripples.push({
         x,
         y,
@@ -117,91 +183,22 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mousedown', handleMouseDown);
 
-    // Theme Color Palettes & Dynamics (Super slow, meditative velocities)
-    const getThemeConfig = () => {
-      switch (theme) {
-        case 'fire':
-          return {
-            glowCenter: 'rgba(249, 115, 22, 0.12)',
-            glowMid: 'rgba(245, 158, 11, 0.04)',
-            particles: ['#fbbf24', '#f97316', '#fdba74', '#fed7aa', '#fde68a'],
-            dirY: -1, // Upward floating embers
-            dirX: 0.1,
-            speedMultiplier: 0.22, // Super slow
-            swayAmp: 0.35
-          };
-        case 'night':
-          return {
-            glowCenter: 'rgba(99, 102, 241, 0.10)',
-            glowMid: 'rgba(129, 140, 248, 0.03)',
-            particles: ['#c7d2fe', '#818cf8', '#a5b4fc', '#e0e7ff', '#38bdf8', '#ffffff'],
-            dirY: -0.05, // Almost floating in zero-G
-            dirX: 0.02,
-            speedMultiplier: 0.12,
-            swayAmp: 0.18
-          };
-        case 'rain':
-          return {
-            glowCenter: 'rgba(14, 165, 233, 0.10)',
-            glowMid: 'rgba(56, 189, 248, 0.03)',
-            particles: ['#38bdf8', '#7dd3fc', '#bae6fd', '#93c5fd', '#67e8f9'],
-            dirY: 0.65, // Gentle downward drift
-            dirX: 0.05,
-            speedMultiplier: 0.35,
-            swayAmp: 0.12
-          };
-        case 'ocean':
-          return {
-            glowCenter: 'rgba(20, 184, 166, 0.11)',
-            glowMid: 'rgba(45, 212, 191, 0.03)',
-            particles: ['#2dd4bf', '#5eead4', '#38bdf8', '#99f6e4', '#a7f3d0'],
-            dirY: -0.15, // Gentle underwater current
-            dirX: 0.25,
-            speedMultiplier: 0.18,
-            swayAmp: 0.4
-          };
-        case 'wind':
-          return {
-            glowCenter: 'rgba(34, 197, 94, 0.10)',
-            glowMid: 'rgba(74, 222, 128, 0.03)',
-            particles: ['#4ade80', '#86efac', '#a7f3d0', '#fef08a', '#bbf7d0'],
-            dirY: -0.18, // Lazy breeze
-            dirX: 0.4,
-            speedMultiplier: 0.25,
-            swayAmp: 0.45
-          };
-        default:
-          return {
-            glowCenter: 'rgba(56, 189, 248, 0.10)',
-            glowMid: 'rgba(148, 163, 184, 0.03)',
-            particles: ['#ffffff', '#94a3b8', '#cbd5e1', '#38bdf8'],
-            dirY: -0.1,
-            dirX: 0.05,
-            speedMultiplier: 0.15,
-            swayAmp: 0.2
-          };
-      }
-    };
-
-    const cfg = getThemeConfig();
-
-    // Create 50 Slow Organic Ambient Dust Particles
+    // Create 48 Particles ONCE (persistent across all breath phases and theme switches)
+    const initialCfg = THEME_CONFIGS[theme] || THEME_CONFIGS.fire;
     const particleCount = 48;
     const particles: Particle[] = Array.from({ length: particleCount }, () => {
-      const color = cfg.particles[Math.floor(Math.random() * cfg.particles.length)];
-      const baseRadius = Math.random() * 1.6 + 0.8;
+      const color = initialCfg.particles[Math.floor(Math.random() * initialCfg.particles.length)];
       return {
         x: Math.random() * width,
         y: Math.random() * height,
-        radius: baseRadius,
-        baseRadius,
+        radius: Math.random() * 1.6 + 0.8,
         vx: 0,
         vy: 0,
         baseSpeed: Math.random() * 0.4 + 0.6,
         alpha: Math.random() * 0.35 + 0.15,
         baseAlpha: Math.random() * 0.35 + 0.15,
         color,
-        twinkleSpeed: Math.random() * 0.008 + 0.004, // Very slow twinkle
+        twinkleSpeed: Math.random() * 0.008 + 0.004,
         twinklePhase: Math.random() * Math.PI * 2,
         swaySpeed: Math.random() * 0.006 + 0.003,
         swayOffset: Math.random() * Math.PI * 2
@@ -209,10 +206,16 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
     });
 
     let time = 0;
+    let smoothBreathScale = 1.0;
 
     const render = () => {
-      time += 0.008; // Very slow time progression
-      const currentCfg = getThemeConfig();
+      time += 0.008;
+
+      const currentProps = propsRef.current;
+      const cfg = THEME_CONFIGS[currentProps.theme] || THEME_CONFIGS.neutral;
+
+      // Smooth breath scale interpolation (no jumps or resets)
+      smoothBreathScale += (currentProps.breathScale - smoothBreathScale) * 0.05;
 
       // Smooth mouse easing with viscous drag
       mouse.x += (mouse.targetX - mouse.x) * 0.04;
@@ -220,8 +223,8 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
 
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Slow Organic Nebula Background Aura (Pulsing gently with breath)
-      const breathFactor = isRunning ? (breathScale - 1) * 0.12 : 0;
+      // 1. Slow Organic Nebula Background Aura
+      const breathFactor = currentProps.isRunning ? (smoothBreathScale - 1) * 0.12 : 0;
       const auraPulse = Math.sin(time * 0.4) * 0.03 + breathFactor;
       
       const auraGrad = ctx.createRadialGradient(
@@ -232,14 +235,14 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
         height * 0.5,
         Math.max(width, height) * 0.75 * (1 + auraPulse)
       );
-      auraGrad.addColorStop(0, currentCfg.glowCenter);
-      auraGrad.addColorStop(0.55, currentCfg.glowMid);
+      auraGrad.addColorStop(0, cfg.glowCenter);
+      auraGrad.addColorStop(0.55, cfg.glowMid);
       auraGrad.addColorStop(1, 'rgba(7, 12, 24, 0)');
 
       ctx.fillStyle = auraGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // 2. Soft, Dreamy Cursor Light Aura (Diffused, zero banding)
+      // 2. Soft Cursor Light Aura
       if (mouse.active) {
         const glowRadius = 240;
         const mouseGrad = ctx.createRadialGradient(
@@ -250,8 +253,8 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
           mouse.y,
           glowRadius
         );
-        mouseGrad.addColorStop(0, currentCfg.glowCenter);
-        mouseGrad.addColorStop(0.5, currentCfg.glowMid);
+        mouseGrad.addColorStop(0, cfg.glowCenter);
+        mouseGrad.addColorStop(0.5, cfg.glowMid);
         mouseGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
         ctx.fillStyle = mouseGrad;
@@ -260,11 +263,11 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
         ctx.fill();
       }
 
-      // 3. Render Slow Zen Ripples
+      // 3. Render Ripples
       for (let i = ripples.length - 1; i >= 0; i--) {
         const r = ripples[i];
         r.radius += r.speed;
-        r.alpha *= 0.985; // Slow fadeout
+        r.alpha *= 0.985;
 
         ctx.beginPath();
         ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
@@ -277,7 +280,7 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
         }
       }
 
-      // 4. Subtle Micro-Constellation Web between very close particles
+      // 4. Constellation Web
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -296,13 +299,11 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
 
       // 5. Update & Draw Silky Floating Particles
       particles.forEach((p, idx) => {
-        // Organic flow field using 2D harmonic wave equation
         const flowAngle = Math.sin(p.x * 0.002 + time) + Math.cos(p.y * 0.002 + time * 0.7);
-        const naturalSway = Math.sin(time * p.swaySpeed * 80 + p.swayOffset + idx) * currentCfg.swayAmp;
+        const naturalSway = Math.sin(time * p.swaySpeed * 80 + p.swayOffset + idx) * cfg.swayAmp;
 
-        // Base smooth velocity
-        const targetVx = (currentCfg.dirX + Math.cos(flowAngle) * 0.2 + naturalSway) * currentCfg.speedMultiplier * p.baseSpeed;
-        const targetVy = (currentCfg.dirY + Math.sin(flowAngle) * 0.15) * currentCfg.speedMultiplier * p.baseSpeed;
+        const targetVx = (cfg.dirX + Math.cos(flowAngle) * 0.2 + naturalSway) * cfg.speedMultiplier * p.baseSpeed;
+        const targetVy = (cfg.dirY + Math.sin(flowAngle) * 0.15) * cfg.speedMultiplier * p.baseSpeed;
 
         p.vx += (targetVx - p.vx) * 0.05;
         p.vy += (targetVy - p.vy) * 0.05;
@@ -310,11 +311,10 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
         p.x += p.vx;
         p.y += p.vy;
 
-        // Gentle, soft breathing twinkle
         const twinkle = Math.sin(time * p.twinkleSpeed * 100 + p.twinklePhase) * 0.12;
         p.alpha = Math.max(0.08, Math.min(0.65, p.baseAlpha + twinkle));
 
-        // Soft, viscous mouse reaction (Particles gently yield to cursor like swimming in honey)
+        // Soft Mouse Deflection
         if (mouse.active) {
           const dx = p.x - mouse.x;
           const dy = p.y - mouse.y;
@@ -324,7 +324,6 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
           if (dist < maxDist && dist > 1) {
             const force = Math.pow((maxDist - dist) / maxDist, 1.8) * 0.8;
             const angle = Math.atan2(dy, dx);
-            // Soft fluid swirl deflection
             const swirlAngle = angle + 0.25;
             p.x += Math.cos(swirlAngle) * force;
             p.y += Math.sin(swirlAngle) * force;
@@ -332,13 +331,13 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
           }
         }
 
-        // Seamless Boundary Wrap
+        // Boundary Wrap
         if (p.y < -15) p.y = height + 15;
         if (p.y > height + 15) p.y = -15;
         if (p.x < -15) p.x = width + 15;
         if (p.x > width + 15) p.x = -15;
 
-        // Draw soft, antialiased glowing particle
+        // Draw particle
         ctx.save();
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
@@ -361,7 +360,7 @@ export const ParticleCanvas: React.FC<ParticleCanvasProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
     };
-  }, [theme, isRunning, breathScale]);
+  }, []); // Run ONCE — no tearing down or re-initializing on breath scale updates!
 
   return (
     <canvas

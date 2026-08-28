@@ -24,6 +24,7 @@ export function App() {
   const [breathPhaseText, setBreathPhaseText] = useState<string>('Вдох');
   const [breathHaloScale, setBreathHaloScale] = useState<number>(1.0);
   const [breathHaloOpacity, setBreathHaloOpacity] = useState<number>(0.2);
+  const [phaseDurationMs, setPhaseDurationMs] = useState<number>(1000);
 
   // Ambient Settings
   const [ambientSound, setAmbientSound] = useState<string>('fire');
@@ -77,6 +78,7 @@ export function App() {
 
     setBreathHaloScale(0.95);
     setBreathHaloOpacity(0.15);
+    setPhaseDurationMs(800);
   }, []);
 
   const completeSession = useCallback(() => {
@@ -134,6 +136,7 @@ export function App() {
       }, 1000);
     }
 
+    setPhaseDurationMs(1200);
     setBreathHaloScale(1.15);
     setBreathHaloOpacity(0.3);
   }, [playStartBell, meditateBgSound, meditateType, meditateTimeLeft, completeSession]);
@@ -153,7 +156,8 @@ export function App() {
         (currentTime, duration) => {
           const remaining = Math.max(0, Math.floor(duration - currentTime));
           setMeditateTimeLeft(remaining);
-          const pulse = Math.sin(currentTime * 0.8) * 0.2 + 1.1;
+          const pulse = Math.sin(currentTime * 0.8) * 0.15 + 1.1;
+          setPhaseDurationMs(1000);
           setBreathHaloScale(pulse);
           setBreathHaloOpacity(0.35);
         },
@@ -189,6 +193,7 @@ export function App() {
     const runPhase = () => {
       const p = pattern[phaseIdx];
       setBreathPhaseText(p.text);
+      setPhaseDurationMs(p.dur);
       setBreathHaloScale(p.scale);
       setBreathHaloOpacity(p.opacity);
 
@@ -203,6 +208,7 @@ export function App() {
 
   const startAmbientSession = useCallback(() => {
     audioEngine.playSoundscape(ambientSound);
+    setPhaseDurationMs(1200);
     setBreathHaloScale(1.2);
     setBreathHaloOpacity(0.35);
   }, [ambientSound]);
@@ -273,6 +279,7 @@ export function App() {
     setAmbientSound(soundId);
     setIsRunning(true);
     audioEngine.playSoundscape(soundId);
+    setPhaseDurationMs(1200);
     setBreathHaloScale(1.2);
     setBreathHaloOpacity(0.35);
   };
@@ -420,6 +427,7 @@ export function App() {
           isBreatheMode={isVisualRhythmMode}
           breathHaloScale={breathHaloScale}
           breathHaloOpacity={breathHaloOpacity}
+          phaseDurationMs={phaseDurationMs}
           onToggle={toggleSession}
         />
 
