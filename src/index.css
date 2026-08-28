@@ -2,32 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  .bg-radial {
-    background-image: radial-gradient(circle at 50% 35%, var(--tw-gradient-from) 0%, var(--tw-gradient-to) 100%);
-  }
-
-  /* Hide scrollbars */
-  .scrollbar-none::-webkit-scrollbar {
-    display: none;
-  }
-  .scrollbar-none {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+:root {
+  --bg-color: #030712;
+  --text-primary: #e6edf8;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent-gold: #f6c46a;
+  --accent-amber: #f97316;
+  --accent-blue: #38bdf8;
+  --accent-tomato: #f87171;
+  --glass-bg: rgba(6, 12, 26, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-border-hover: rgba(255, 255, 255, 0.22);
+  --font-display: 'Jost', 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Manrope', 'Jost', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Menlo', monospace;
 }
 
-body {
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  margin: 0;
-  padding: 0;
-  background-color: #070c18;
-  color: #f8fafc;
+* {
+  box-sizing: border-box;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: manipulation;
 }
 
-body.cursor-none, body.cursor-none * {
-  cursor: none !important;
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animations from lofi-night-sky */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.85;
+    filter: drop-shadow(0 0 8px rgba(246, 196, 106, 0.4));
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 20px rgba(246, 196, 106, 0.8));
+    transform: scale(1.05);
+  }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3.5s ease-in-out infinite;
+}
+
+.animate-breathe {
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+/* Glass pill utility */
+.glass-pill {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: all 0.2s ease;
+}
+
+.glass-pill:hover {
+  border-color: var(--glass-border-hover);
+  background: rgba(18, 30, 56, 0.85);
 }

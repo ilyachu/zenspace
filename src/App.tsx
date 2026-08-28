@@ -7,18 +7,38 @@ import { AuthModal } from './components/AuthModal';
 import { IntroOverlay } from './components/IntroOverlay';
 import { audioEngine, GUIDED_TRACKS } from './services/audioEngine';
 
-const ZEN_QUOTES = [
-  'ничего срочного сегодня',
-  'вдох — покой, выдох — отпускание',
-  'здесь и сейчас всё спокойно',
-  'ум чист как ночное небо',
-  'просто наблюдайте за дыханием',
-  'тишина внутри вас',
-  'возвращайтесь в настоящий момент'
-];
+const ZEN_QUOTES = {
+  ru: [
+    'ничего срочного сегодня',
+    'вдох — покой, выдох — отпускание',
+    'здесь и сейчас всё спокойно',
+    'ум чист как ночное небо',
+    'просто наблюдайте за дыханием',
+    'тишина внутри вас',
+    'возвращайтесь в настоящий момент'
+  ],
+  en: [
+    'nothing urgent tonight',
+    'inhale peace, exhale release',
+    'all is calm right here, right now',
+    'mind is clear as the night sky',
+    'simply observe your breath',
+    'silence resides within you',
+    'return gently to the present moment'
+  ]
+};
 
 export function App() {
-  // Navigation State
+  // Navigation & Language State
+  const [lang, setLang] = useState<'ru' | 'en'>(() => {
+    try {
+      const saved = localStorage.getItem('zenspace_lang');
+      return (saved === 'ru' || saved === 'en') ? saved : 'ru';
+    } catch {
+      return 'ru';
+    }
+  });
+
   const [mode, setMode] = useState<AppMode>('meditate');
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -65,6 +85,13 @@ export function App() {
   const breathTimeoutRef = useRef<number | null>(null);
   const mouseActivityTimerRef = useRef<number | null>(null);
 
+  const toggleLang = (newLang: 'ru' | 'en') => {
+    setLang(newLang);
+    try {
+      localStorage.setItem('zenspace_lang', newLang);
+    } catch {}
+  };
+
   // Format MM:SS
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -88,7 +115,8 @@ export function App() {
   };
 
   const nextQuote = () => {
-    setQuoteIdx((prev) => (prev + 1) % ZEN_QUOTES.length);
+    const quotes = ZEN_QUOTES[lang];
+    setQuoteIdx((prev) => (prev + 1) % quotes.length);
   };
 
   // Switch Mode Handler
@@ -211,19 +239,19 @@ export function App() {
 
     const patterns: Record<string, Array<{ text: string; dur: number; scale: number; opacity: number }>> = {
       box: [
-        { text: 'Вдох', dur: 4000, scale: 1.35, opacity: 0.5 },
-        { text: 'Задержка', dur: 4000, scale: 1.35, opacity: 0.5 },
-        { text: 'Выдох', dur: 4000, scale: 0.85, opacity: 0.15 },
-        { text: 'Пауза', dur: 4000, scale: 0.85, opacity: 0.15 }
+        { text: lang === 'ru' ? 'Вдох' : 'Inhale', dur: 4000, scale: 1.35, opacity: 0.5 },
+        { text: lang === 'ru' ? 'Задержка' : 'Hold', dur: 4000, scale: 1.35, opacity: 0.5 },
+        { text: lang === 'ru' ? 'Выдох' : 'Exhale', dur: 4000, scale: 0.85, opacity: 0.15 },
+        { text: lang === 'ru' ? 'Пауза' : 'Hold', dur: 4000, scale: 0.85, opacity: 0.15 }
       ],
       relax: [
-        { text: 'Вдох', dur: 4000, scale: 1.35, opacity: 0.5 },
-        { text: 'Задержка', dur: 7000, scale: 1.35, opacity: 0.5 },
-        { text: 'Выдох', dur: 8000, scale: 0.85, opacity: 0.15 }
+        { text: lang === 'ru' ? 'Вдох' : 'Inhale', dur: 4000, scale: 1.35, opacity: 0.5 },
+        { text: lang === 'ru' ? 'Задержка' : 'Hold', dur: 7000, scale: 1.35, opacity: 0.5 },
+        { text: lang === 'ru' ? 'Выдох' : 'Exhale', dur: 8000, scale: 0.85, opacity: 0.15 }
       ],
       coherent: [
-        { text: 'Вдох', dur: 5500, scale: 1.35, opacity: 0.5 },
-        { text: 'Выдох', dur: 5500, scale: 0.85, opacity: 0.15 }
+        { text: lang === 'ru' ? 'Вдох' : 'Inhale', dur: 5500, scale: 1.35, opacity: 0.5 },
+        { text: lang === 'ru' ? 'Выдох' : 'Exhale', dur: 5500, scale: 0.85, opacity: 0.15 }
       ]
     };
 
@@ -244,7 +272,7 @@ export function App() {
     };
 
     runPhase();
-  }, [breathPattern, meditateBgSound, completeSession]);
+  }, [breathPattern, meditateBgSound, completeSession, lang]);
 
   const startAmbientSession = useCallback(() => {
     audioEngine.playSoundscape(ambientSound);
@@ -418,29 +446,44 @@ export function App() {
     ? (meditateTimeLeft / currentTotal)
     : (isRunning ? 1 : 0);
 
-  let statusText = 'Нажмите для начала';
+  let statusText = lang === 'ru' ? 'Нажмите для начала' : 'Click to begin';
   if (isRunning) {
     if (mode === 'meditate') {
-      statusText = meditateType === 'free' ? 'Сессия осознанности' : 'Студийный русский аудио-гайд';
+      statusText = meditateType === 'free'
+        ? (lang === 'ru' ? 'Сессия осознанности' : 'Mindfulness Session')
+        : (lang === 'ru' ? 'Студийный русский аудио-гайд' : 'Studio Guided Meditation');
     } else if (mode === 'breathe') {
-      statusText = isBreatheStudioTrack ? 'Студийная практика дыхания' : 'Следите за ритмом';
+      statusText = isBreatheStudioTrack
+        ? (lang === 'ru' ? 'Студийная практика дыхания' : 'Guided Breathwork')
+        : (lang === 'ru' ? 'Следите за ритмом' : 'Follow the Rhythm');
     } else if (mode === 'ambient') {
-      statusText = 'Звуковой покой';
+      statusText = lang === 'ru' ? 'Звуковой покой' : 'Ambient Immersion';
     }
   } else {
     if (mode === 'meditate') {
-      statusText = meditateType === 'free' ? 'Медитация' : 'Студийный русский аудио-гайд';
+      statusText = meditateType === 'free'
+        ? (lang === 'ru' ? 'Медитация' : 'Meditation')
+        : (lang === 'ru' ? 'Студийный русский аудио-гайд' : 'Studio Guided Session');
     } else if (mode === 'breathe') {
-      statusText = isBreatheStudioTrack ? 'Русская практика дыхания' : 'Визуальный ритм дыхания';
+      statusText = isBreatheStudioTrack
+        ? (lang === 'ru' ? 'Русская практика дыхания' : 'Studio Breath Session')
+        : (lang === 'ru' ? 'Визуальный ритм дыхания' : 'Visual Breath Flow');
     } else if (mode === 'ambient') {
-      statusText = 'Выбор ландшафта';
+      statusText = lang === 'ru' ? 'Выбор ландшафта' : 'Select Soundscape';
     }
   }
+
+  const quotes = ZEN_QUOTES[lang];
+  const activeQuote = quotes[quoteIdx % quotes.length];
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-between p-4 md:p-6 overflow-hidden bg-[#030712] text-[#e6edf8]">
       {/* 1. Intro Screen Overlay in exact lofi-night-sky style */}
-      <IntroOverlay onEnter={() => {}} />
+      <IntroOverlay
+        onEnter={() => {}}
+        lang={lang}
+        onToggleLang={toggleLang}
+      />
 
       {/* 2. Theme-Adaptive Living Particle Background Canvas */}
       <ParticleCanvas
@@ -466,10 +509,10 @@ export function App() {
         {/* Floating Poetic Zen Quote in lofi-night-sky style */}
         <div
           onClick={nextQuote}
-          title="Нажмите, чтобы сменить мысль"
+          title={lang === 'ru' ? 'Нажмите, чтобы сменить мысль' : 'Click to change thought'}
           className="cursor-pointer text-xs md:text-sm font-['Jost',sans-serif] tracking-wider text-[#94a3b8] hover:text-[#f6c46a] transition-all duration-300 py-1.5 px-4 rounded-full bg-[#060c1a]/50 border border-white/5 backdrop-blur-md shadow-sm select-none hover:scale-105 my-2"
         >
-          {ZEN_QUOTES[quoteIdx]}
+          {activeQuote}
         </div>
 
         <CircularRing
