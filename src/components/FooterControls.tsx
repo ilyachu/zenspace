@@ -24,6 +24,8 @@ interface FooterControlsProps {
   onAmbientVolumeChange: (vol: number) => void;
   playStartBell: boolean;
   onToggleStartBell: () => void;
+  selectedVoice: 'female' | 'male';
+  onSelectVoice: (voice: 'female' | 'male') => void;
 }
 
 export const FooterControls: React.FC<FooterControlsProps> = ({
@@ -45,7 +47,9 @@ export const FooterControls: React.FC<FooterControlsProps> = ({
   ambientVolume,
   onAmbientVolumeChange,
   playStartBell,
-  onToggleStartBell
+  onToggleStartBell,
+  selectedVoice,
+  onSelectVoice
 }) => {
   const [isPracticeModalOpen, setIsPracticeModalOpen] = useState(false);
   const [isSoundModalOpen, setIsSoundModalOpen] = useState(false);
@@ -56,7 +60,9 @@ export const FooterControls: React.FC<FooterControlsProps> = ({
       return `⏱️ Свободный таймер • ${Math.round(meditateDuration / 60)} мин`;
     }
     const track = GUIDED_TRACKS.find(t => t.id === meditateType);
-    return track ? `🎙️ ${track.title} • ${Math.round(track.duration / 60)} мин` : 'Выбрать практику';
+    const dur = (selectedVoice === 'male' && track?.maleDuration) ? track.maleDuration : (track?.duration || 300);
+    const voiceBadge = selectedVoice === 'male' ? '♂' : '♀';
+    return track ? `🎙️ ${track.title} • ${Math.round(dur / 60)} мин [${voiceBadge}]` : 'Выбрать практику';
   };
 
   const getSoundLabel = (soundId: string) => {
@@ -189,6 +195,8 @@ export const FooterControls: React.FC<FooterControlsProps> = ({
         onSelectType={onMeditateTypeChange}
         meditateDuration={meditateDuration}
         onSelectDuration={onMeditateDurationChange}
+        selectedVoice={selectedVoice}
+        onSelectVoice={onSelectVoice}
       />
 
       <SoundModal
@@ -212,6 +220,8 @@ export const FooterControls: React.FC<FooterControlsProps> = ({
         onClose={() => setIsBreatheModalOpen(false)}
         selectedPattern={breathPattern}
         onSelectPattern={onBreathPatternChange}
+        selectedVoice={selectedVoice}
+        onSelectVoice={onSelectVoice}
       />
     </>
   );

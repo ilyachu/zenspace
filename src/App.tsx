@@ -51,9 +51,24 @@ export function App() {
   // Floating Sky Thought
   const [quoteIdx, setQuoteIdx] = useState<number>(0);
 
+  // Voice Selection (Female: Inguna / Male: Dmitry)
+  const [selectedVoice, setSelectedVoice] = useState<'female' | 'male'>(() => {
+    try {
+      const saved = localStorage.getItem('zenspace_voice');
+      return (saved === 'male' || saved === 'female') ? saved : 'female';
+    } catch {
+      return 'female';
+    }
+  });
+
   // Meditation Settings
   const [meditateType, setMeditateType] = useState<'free' | string>('ru-bodyscan');
-  const [meditateDuration, setMeditateDuration] = useState<number>(238);
+  const [meditateDuration, setMeditateDuration] = useState<number>(() => {
+    const track = GUIDED_TRACKS.find(t => t.id === 'ru-bodyscan');
+    const savedVoice = (localStorage.getItem('zenspace_voice') || 'female') as 'female' | 'male';
+    if (track && savedVoice === 'male' && track.maleDuration) return track.maleDuration;
+    return track ? track.duration : 238;
+  });
   const [meditateTimeLeft, setMeditateTimeLeft] = useState<number>(238);
   const [meditateBgSound, setMeditateBgSound] = useState<string>('fire');
   const [playStartBell, setPlayStartBell] = useState<boolean>(false);
@@ -107,15 +122,23 @@ export function App() {
         setMeditateTimeLeft(meditateDuration);
       } else {
         const track = GUIDED_TRACKS.find(t => t.id === meditateType);
-        if (track) setMeditateTimeLeft(track.duration);
+        if (track) {
+          const dur = (selectedVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+          setMeditateDuration(dur);
+          setMeditateTimeLeft(dur);
+        }
       }
     } else if (newMode === 'breathe') {
       if (breathPattern.startsWith('ru-')) {
         const track = GUIDED_TRACKS.find(t => t.id === breathPattern);
-        if (track) setMeditateTimeLeft(track.duration);
+        if (track) {
+          const dur = (selectedVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+          setMeditateDuration(dur);
+          setMeditateTimeLeft(dur);
+        }
       }
     }
-  }, [meditateType, meditateDuration, breathPattern]);
+  }, [meditateType, meditateDuration, breathPattern, selectedVoice]);
 
   // Start / Stop Session
   const stopSession = useCallback(() => {
@@ -141,15 +164,21 @@ export function App() {
         setMeditateTimeLeft(meditateDuration);
       } else {
         const track = GUIDED_TRACKS.find(t => t.id === meditateType);
-        if (track) setMeditateTimeLeft(track.duration);
+        if (track) {
+          const dur = (selectedVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+          setMeditateTimeLeft(dur);
+        }
       }
     } else if (mode === 'breathe') {
       if (breathPattern.startsWith('ru-')) {
         const track = GUIDED_TRACKS.find(t => t.id === breathPattern);
-        if (track) setMeditateTimeLeft(track.duration);
+        if (track) {
+          const dur = (selectedVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+          setMeditateTimeLeft(dur);
+        }
       }
     }
-  }, [stopSession, playStartBell, mode, meditateType, meditateDuration, breathPattern]);
+  }, [stopSession, playStartBell, mode, meditateType, meditateDuration, breathPattern, selectedVoice]);
 
   const startMeditateSession = useCallback(() => {
     if (playStartBell) {
@@ -171,7 +200,8 @@ export function App() {
         },
         () => {
           completeSession();
-        }
+        },
+        selectedVoice
       );
     } else {
       let currentLeft = meditateTimeLeft;
@@ -188,7 +218,7 @@ export function App() {
     setPhaseDurationMs(1200);
     setBreathHaloScale(1.15);
     setBreathHaloOpacity(0.3);
-  }, [playStartBell, meditateBgSound, meditateType, meditateTimeLeft, completeSession]);
+  }, [playStartBell, meditateBgSound, meditateType, meditateTimeLeft, completeSession, selectedVoice]);
 
   const startBreatheSession = useCallback(() => {
     if (meditateBgSound !== 'none') {
@@ -210,7 +240,8 @@ export function App() {
         },
         () => {
           completeSession();
-        }
+        },
+        selectedVoice
       );
       return;
     }
@@ -270,6 +301,32 @@ export function App() {
     }
   }, [isRunning, mode, startMeditateSession, startBreatheSession, startAmbientSession, stopSession]);
 
+  // Voice Switch Handler
+  const handleVoiceChange = (newVoice: 'female' | 'male') => {
+    if (isRunning) stopSession();
+    setSelectedVoice(newVoice);
+    audioEngine.setActiveVoice(newVoice);
+    try {
+      localStorage.setItem('zenspace_voice', newVoice);
+    } catch {}
+
+    if (mode === 'meditate' && meditateType !== 'free') {
+      const track = GUIDED_TRACKS.find(t => t.id === meditateType);
+      if (track) {
+        const dur = (newVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+        setMeditateDuration(dur);
+        setMeditateTimeLeft(dur);
+      }
+    } else if (mode === 'breathe' && breathPattern.startsWith('ru-')) {
+      const track = GUIDED_TRACKS.find(t => t.id === breathPattern);
+      if (track) {
+        const dur = (newVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+        setMeditateDuration(dur);
+        setMeditateTimeLeft(dur);
+      }
+    }
+  };
+
   // Meditate Type Selection
   const handleMeditateTypeChange = (type: 'free' | string) => {
     if (isRunning) stopSession();
@@ -280,8 +337,9 @@ export function App() {
     } else {
       const track = GUIDED_TRACKS.find(t => t.id === type);
       if (track) {
-        setMeditateDuration(track.duration);
-        setMeditateTimeLeft(track.duration);
+        const dur = (selectedVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+        setMeditateDuration(dur);
+        setMeditateTimeLeft(dur);
       }
     }
   };
@@ -301,8 +359,9 @@ export function App() {
     if (pattern.startsWith('ru-')) {
       const track = GUIDED_TRACKS.find(t => t.id === pattern);
       if (track) {
-        setMeditateDuration(track.duration);
-        setMeditateTimeLeft(track.duration);
+        const dur = (selectedVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+        setMeditateDuration(dur);
+        setMeditateTimeLeft(dur);
       }
     }
   };
@@ -354,6 +413,7 @@ export function App() {
     if (activeSound === 'rain') return 'rain';
     if (activeSound === 'ocean') return 'ocean';
     if (activeSound === 'wind') return 'wind';
+    if (activeSound.startsWith('freq-')) return 'night';
     return 'neutral';
   };
 
@@ -533,6 +593,8 @@ export function App() {
           onAmbientVolumeChange={handleAmbientVolumeChange}
           playStartBell={playStartBell}
           onToggleStartBell={() => setPlayStartBell(prev => !prev)}
+          selectedVoice={selectedVoice}
+          onSelectVoice={handleVoiceChange}
         />
       </div>
 

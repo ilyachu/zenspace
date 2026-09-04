@@ -25,6 +25,8 @@ interface PracticeModalProps {
   onSelectType: (type: 'free' | string) => void;
   meditateDuration: number;
   onSelectDuration: (dur: number) => void;
+  selectedVoice: 'female' | 'male';
+  onSelectVoice: (voice: 'female' | 'male') => void;
 }
 
 export const PracticeModal: React.FC<PracticeModalProps> = ({
@@ -33,7 +35,9 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({
   meditateType,
   onSelectType,
   meditateDuration,
-  onSelectDuration
+  onSelectDuration,
+  selectedVoice,
+  onSelectVoice
 }) => {
   useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
@@ -119,42 +123,81 @@ export const PracticeModal: React.FC<PracticeModalProps> = ({
 
           {/* Секция 2: Голосовые практики UCLA */}
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-              <span>Студийные русские медитации (UCLA MARC)</span>
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                <span>Голосовые медитации</span>
+              </div>
+            </div>
+
+            {/* Выбор голоса: Женский / Мужской */}
+            <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/[0.04] border border-white/10 mb-3">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectVoice('female');
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium transition-all ${
+                  selectedVoice === 'female'
+                    ? 'bg-sky-400 text-slate-950 font-semibold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>♀</span>
+                <span>Женский (Ингуна)</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectVoice('male');
+                }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium transition-all ${
+                  selectedVoice === 'male'
+                    ? 'bg-sky-400 text-slate-950 font-semibold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>♂</span>
+                <span>Мужской (Дмитрий)</span>
+              </button>
             </div>
 
             <div className="space-y-2">
-              {GUIDED_TRACKS.map((track: GuidedTrack) => (
-                <div
-                  key={track.id}
-                  onClick={() => {
-                    onSelectType(track.id);
-                    onClose();
-                  }}
-                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                    meditateType === track.id
-                      ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
-                  }`}
-                >
-                  <div>
-                    <div className="text-sm font-medium text-white flex items-center gap-2">
-                      <span>{track.title}</span>
-                      <span className="text-xs text-sky-400/90 font-mono bg-sky-400/10 px-2 py-0.5 rounded-md">
-                        {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
-                      </span>
+              {GUIDED_TRACKS.map((track: GuidedTrack) => {
+                const trackDur = (selectedVoice === 'male' && track.maleDuration) ? track.maleDuration : track.duration;
+                return (
+                  <div
+                    key={track.id}
+                    onClick={() => {
+                      onSelectType(track.id);
+                      onClose();
+                    }}
+                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-center justify-between gap-3 ${
+                      meditateType === track.id
+                        ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
+                        : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-sm font-medium text-white flex items-center gap-2">
+                        <span>{track.title}</span>
+                        <span className="text-xs text-sky-400/90 font-mono bg-sky-400/10 px-2 py-0.5 rounded-md">
+                          {Math.floor(trackDur / 60)}:{(trackDur % 60).toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-400 mt-0.5">{track.subtitle}</div>
                     </div>
-                    <div className="text-xs text-slate-400 mt-0.5">{track.subtitle}</div>
-                  </div>
 
-                  {meditateType === track.id && (
-                    <div className="w-6 h-6 rounded-full bg-sky-400 flex items-center justify-center text-slate-950 flex-shrink-0">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    </div>
-                  )}
-                </div>
-              ))}
+                    {meditateType === track.id && (
+                      <div className="w-6 h-6 rounded-full bg-sky-400 flex items-center justify-center text-slate-950 flex-shrink-0">
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -201,7 +244,14 @@ export const SoundModal: React.FC<SoundModalProps> = ({
   onToggleStartBell
 }) => {
   useEscapeKey(isOpen, onClose);
+  const [soundTab, setSoundTab] = React.useState<'nature' | 'frequency'>(() => {
+    return selectedSound.startsWith('freq-') ? 'frequency' : 'nature';
+  });
+
   if (!isOpen) return null;
+
+  const natureSounds = SOUNDSCAPES.filter(s => s.category === 'nature');
+  const freqSounds = SOUNDSCAPES.filter(s => s.category === 'frequency');
 
   return (
     <div
@@ -214,8 +264,8 @@ export const SoundModal: React.FC<SoundModalProps> = ({
       >
         <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div>
-            <h3 className="text-lg font-semibold text-white">Фоновая атмосфера и звук</h3>
-            <p className="text-xs text-slate-400">Выберите звук и настройте баланс</p>
+            <h3 className="text-lg font-semibold text-white">Фоновая атмосфера</h3>
+            <p className="text-xs text-slate-400">Природа, частоты Сольфеджио и бинауральные ритмы</p>
           </div>
           <button
             onClick={onClose}
@@ -227,52 +277,110 @@ export const SoundModal: React.FC<SoundModalProps> = ({
           </button>
         </div>
 
-        {/* Звуковые карточки */}
-        <div className="py-4 space-y-2 overflow-y-auto scrollbar-none pr-0.5">
-          {/* Тишина */}
-          <div
-            onClick={() => {
-              onSelectSound('none');
-            }}
-            className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-              selectedSound === 'none'
-                ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
+        {/* Табы: Природа / Частоты */}
+        <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/10 my-3">
+          <button
+            type="button"
+            onClick={() => setSoundTab('nature')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium transition-all ${
+              soundTab === 'nature'
+                ? 'bg-sky-400 text-slate-950 font-semibold shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🤫</span>
-              <div>
-                <div className="text-sm font-medium text-white">Тишина</div>
-                <div className="text-xs text-slate-400">Без фоновых звуков природы</div>
-              </div>
-            </div>
-            {selectedSound === 'none' && <Check className="w-4 h-4 text-sky-400" />}
-          </div>
+            <span>🌲 Звуки природы</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSoundTab('frequency')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium transition-all ${
+              soundTab === 'frequency'
+                ? 'bg-sky-400 text-slate-950 font-semibold shadow-md'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Частоты & Бинаурал</span>
+          </button>
+        </div>
 
-          {/* Природа */}
-          {SOUNDSCAPES.map((s: Soundscape) => (
-            <div
-              key={s.id}
-              onClick={() => {
-                onSelectSound(s.id);
-              }}
-              className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
-                selectedSound === s.id
-                  ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
-                  : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{s.icon}</span>
-                <div>
-                  <div className="text-sm font-medium text-white">{s.name}</div>
-                  <div className="text-xs text-slate-400">Бесшовный стерео-луп природы</div>
+        {/* Звуковые карточки */}
+        <div className="py-1 space-y-2 overflow-y-auto scrollbar-none pr-0.5 max-h-[38vh]">
+          {soundTab === 'nature' ? (
+            <>
+              {/* Тишина */}
+              <div
+                onClick={() => onSelectSound('none')}
+                className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
+                  selectedSound === 'none'
+                    ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
+                    : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🤫</span>
+                  <div>
+                    <div className="text-sm font-medium text-white">Тишина</div>
+                    <div className="text-xs text-slate-400">Без фонового звука</div>
+                  </div>
                 </div>
+                {selectedSound === 'none' && <Check className="w-4 h-4 text-sky-400" />}
               </div>
-              {selectedSound === s.id && <Check className="w-4 h-4 text-sky-400" />}
-            </div>
-          ))}
+
+              {/* Природа */}
+              {natureSounds.map((s: Soundscape) => (
+                <div
+                  key={s.id}
+                  onClick={() => onSelectSound(s.id)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
+                    selectedSound === s.id
+                      ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
+                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{s.icon}</span>
+                    <div>
+                      <div className="text-sm font-medium text-white">{s.name}</div>
+                      <div className="text-xs text-slate-400">{s.subtitle || 'Бесшовный стерео-луп природы'}</div>
+                    </div>
+                  </div>
+                  {selectedSound === s.id && <Check className="w-4 h-4 text-sky-400" />}
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              {/* Бейдж подсказки про наушники */}
+              <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-400/20 text-[11px] text-sky-300 flex items-center gap-2 mb-2">
+                <span>🎧</span>
+                <span>Рекомендуется слушать в наушниках для стерео-эффекта бинауральных волн.</span>
+              </div>
+
+              {/* Частоты */}
+              {freqSounds.map((s: Soundscape) => (
+                <div
+                  key={s.id}
+                  onClick={() => onSelectSound(s.id)}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                    selectedSound === s.id
+                      ? 'bg-sky-500/10 border-sky-400/80 shadow-[0_0_16px_rgba(56,189,248,0.15)]'
+                      : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{s.icon}</span>
+                      <span className="text-sm font-medium text-white">{s.name}</span>
+                    </div>
+                    {selectedSound === s.id && <Check className="w-4 h-4 text-sky-400" />}
+                  </div>
+                  <div className="text-xs text-sky-400/90 font-mono mb-1">{s.subtitle}</div>
+                  {s.description && <div className="text-[11px] text-slate-400 leading-relaxed">{s.description}</div>}
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Раздельный микшер звука */}
@@ -348,13 +456,17 @@ interface BreatheModalProps {
   onClose: () => void;
   selectedPattern: string;
   onSelectPattern: (p: string) => void;
+  selectedVoice?: 'female' | 'male';
+  onSelectVoice?: (v: 'female' | 'male') => void;
 }
 
 export const BreatheModal: React.FC<BreatheModalProps> = ({
   isOpen,
   onClose,
   selectedPattern,
-  onSelectPattern
+  onSelectPattern,
+  selectedVoice = 'female',
+  onSelectVoice
 }) => {
   useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
@@ -362,14 +474,14 @@ export const BreatheModal: React.FC<BreatheModalProps> = ({
   const studioTracks = [
     {
       id: 'ru-breathing',
-      title: '🎙️ Осознанное дыхание (7:50)',
-      subtitle: 'Живой студийный голос (UCLA MARC)',
+      title: '🎙️ Осознанное дыхание',
+      subtitle: selectedVoice === 'male' ? 'Мужской голос (Дмитрий)' : 'Живой голос (UCLA MARC / Ингуна)',
       desc: 'Обучение глубокому фокусу на дыхании, освобождение от мыслей.'
     },
     {
       id: 'ru-breathsoundbody',
-      title: '🎙️ Дыхание, звуки и тело (10:20)',
-      subtitle: 'Живой студийный голос (UCLA MARC)',
+      title: '🎙️ Дыхание, звуки и тело',
+      subtitle: selectedVoice === 'male' ? 'Мужской голос (Дмитрий)' : 'Живой голос (UCLA MARC / Ингуна)',
       desc: 'Синхронизация дыхания с телесными ощущениями и пространством.'
     }
   ];
@@ -424,8 +536,36 @@ export const BreatheModal: React.FC<BreatheModalProps> = ({
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-              <span>Студийные аудио-практики (Живой голос)</span>
+              <span>Студийные аудио-практики</span>
             </div>
+
+            {/* Выбор голоса */}
+            {onSelectVoice && (
+              <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/[0.04] border border-white/10 mb-2.5">
+                <button
+                  type="button"
+                  onClick={() => onSelectVoice('female')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium transition-all ${
+                    selectedVoice === 'female'
+                      ? 'bg-sky-400 text-slate-950 font-semibold shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>♀ Женский</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectVoice('male')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-medium transition-all ${
+                    selectedVoice === 'male'
+                      ? 'bg-sky-400 text-slate-950 font-semibold shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>♂ Мужской</span>
+                </button>
+              </div>
+            )}
             <div className="space-y-2">
               {studioTracks.map(t => (
                 <div
