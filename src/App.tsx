@@ -93,6 +93,35 @@ export function App() {
   const breathTimeoutRef = useRef<number | null>(null);
   const mouseActivityTimerRef = useRef<number | null>(null);
 
+  // Telegram Mini App (TMA) Integration & Deep Links
+  useEffect(() => {
+    const tg = (window as unknown as { Telegram?: { WebApp?: any } }).Telegram?.WebApp;
+    if (tg) {
+      try {
+        tg.ready();
+        tg.expand();
+        if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+        if (tg.setHeaderColor) tg.setHeaderColor('#060c1a');
+        if (tg.setBackgroundColor) tg.setBackgroundColor('#060c1a');
+      } catch (e) {
+        console.debug('Telegram WebApp init:', e);
+      }
+    }
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlMode = params.get('mode');
+      const urlPattern = params.get('pattern');
+
+      if (urlMode === 'breathe' || urlMode === 'meditate' || urlMode === 'ambient') {
+        setMode(urlMode as AppMode);
+      }
+      if (urlPattern) {
+        setBreathPattern(urlPattern);
+      }
+    } catch {}
+  }, []);
+
   const toggleLang = (newLang: 'ru' | 'en') => {
     setLang(newLang);
     try {
@@ -158,6 +187,14 @@ export function App() {
   const completeSession = useCallback(() => {
     stopSession();
     if (playStartBell) audioEngine.playBowl();
+
+    // Telegram Haptic Feedback
+    try {
+      const tg = (window as unknown as { Telegram?: { WebApp?: any } }).Telegram?.WebApp;
+      if (tg?.HapticFeedback?.notificationOccurred) {
+        tg.HapticFeedback.notificationOccurred('success');
+      }
+    } catch {}
 
     if (mode === 'meditate') {
       if (meditateType === 'free') {
@@ -291,6 +328,13 @@ export function App() {
   }, [ambientSound]);
 
   const toggleSession = useCallback(() => {
+    try {
+      const tg = (window as unknown as { Telegram?: { WebApp?: any } }).Telegram?.WebApp;
+      if (tg?.HapticFeedback?.impactOccurred) {
+        tg.HapticFeedback.impactOccurred('medium');
+      }
+    } catch {}
+
     if (!isRunning) {
       setIsRunning(true);
       if (mode === 'meditate') startMeditateSession();
